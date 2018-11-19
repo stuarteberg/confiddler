@@ -1,5 +1,7 @@
-import json
 import collections
+
+from json import (load, loads, JSONEncoder, JSONDecoder, JSONDecodeError, #@UnusedImport
+                  dump as builtin_dump, dumps as builtin_dumps)
 
 try:
     import numpy as np
@@ -8,7 +10,7 @@ except ImportError:
     _numpy_loaded = False
 
 
-class ExtendedEncoder(json.JSONEncoder):
+class ExtendedEncoder(JSONEncoder):
     """
     Encoder that handles objects that the built-in json library doesn't handle:
     
@@ -41,7 +43,7 @@ def dump(*args, **kwargs):
     """
     if 'cls' not in kwargs:
         kwargs['cls'] = ExtendedEncoder
-    return json.dump(*args, **kwargs)
+    return builtin_dump(*args, **kwargs)
 
 
 def dumps(*args, **kwargs):
@@ -50,7 +52,4 @@ def dumps(*args, **kwargs):
     """
     if 'cls' not in kwargs:
         kwargs['cls'] = ExtendedEncoder
-    return json.dump(*args, **kwargs)
-
-load = json.load
-loads = json.loads
+    return builtin_dumps(*args, **kwargs)
