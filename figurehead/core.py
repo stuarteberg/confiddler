@@ -1,11 +1,93 @@
 import io
 import copy
+from pathlib import Path
+from os import PathLike
+from collections.abc import Mapping
 
 from jsonschema import Draft4Validator, validators
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from ruamel.yaml import YAML
 yaml = YAML()
 yaml.default_flow_style = True
+
+from . import json
+
+
+def load_config(path_or_file, schema):
+    """
+    Load the config data from the given file (or path to a file),
+    and validate it against the given schema.
+    
+    All missing values will be inserted from schema defaults.
+    If a setting is missing and the schema contains no default
+    value for it, a ValidationError is raised.
+    
+    Args:
+        path_or_file:
+            The raw config data. Either a file object or a file path.
+        schema:
+            The config schema, already loaded into a Python dict.
+        
+    Returns:
+        dict
+    """
+    assert isinstance(schema, Mapping), \
+        "Invalid schema type: should be a dict of jsonschema specs"
+    
+    if isinstance(path_or_file, str):
+        path_or_file = Path(path_or_file)
+
+    if isinstance(path_or_file, PathLike):
+        with open(path_or_file, 'r') as f:
+            return _load_config(f, schema)
+    else:
+        return _load_config(path_or_file, schema)
+
+
+def _load_config(f, schema):
+    config = yaml.load(f)
+    validate_and_inject_defaults(config, schema)
+
+
+def dump_default_config(schema, f=None, format="yaml"): #@ReservedAssignment
+    """
+    Dump the default config settings from the given schema.
+    Settings without default values will use '{{NO_DEFAULT}}' as a placeholder.
+    
+    
+    Args:
+        schema:
+            The config schema
+
+        f:
+            File object to which default config data will be dumped.
+            If None, then the default config is returned as a string.
+    format:
+        Either "json", "yaml", or "yaml-with-comments".
+        The "yaml-with-comments" format inserts comments above each setting,
+        populated with the setting's "description" field from the schema.
+
+    Returns:
+        None, unless no file was provided, in which
+        case the default config is returned as a string.
+    """
+    assert format in ("json", "yaml", "yaml-with-comments")
+
+    if f is None:
+        output_stream = io.StringIO()
+    else:
+        output_stream = f
+
+    if format == "json":
+        default_instance = inject_defaults( {}, schema )
+        json.dump( default_instance, output_stream, indent=4 )
+    else:
+        default_instance = inject_defaults( {}, schema, (format == "yaml-with-comments"), 2 )
+        yaml.dump(default_instance, output_stream )
+
+    if f is None:
+        return output_stream.getvalue()
+
 
 def flow_style(ob):
     """
@@ -46,7 +128,7 @@ def extend_with_default(validator_class):
     validate_properties = validator_class.VALIDATORS["properties"]
 
     def set_defaults_and_validate(validator, properties, instance, schema):
-        for property, subschema in properties.items():
+        for _property, subschema in properties.items():
             if "default" in subschema:
                 default = copy.deepcopy(subschema["default"])
                 if isinstance(default, dict):
@@ -246,7 +328,7 @@ if __name__ == "__main__":
         }
     }
     
-    import json
+    import json #@Reimport
     
     obj1 = {}
     DefaultValidatingDraft4Validator(schema).validate(obj1)
@@ -273,7 +355,7 @@ if __name__ == "__main__":
     #print(json.dumps(obj3, indent=4) + '\n')
     
     import sys
-    from ruamel.yaml import YAML
+    from ruamel.yaml import YAML #@Reimport
     yaml = YAML()
     yaml.default_flow_style = False
     yaml.dump(obj3_with_defaults, sys.stdout)
