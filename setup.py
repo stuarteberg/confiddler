@@ -2,7 +2,8 @@ from setuptools import setup
 import versioneer
 
 requirements = [
-    # package requirements go here
+    'ruamel.yaml>=0.15.71',
+    'jsonschema>=3.0.0a3',
 ]
 
 setup(
@@ -22,7 +23,6 @@ setup(
     install_requires=requirements,
     keywords='figurehead',
     classifiers=[
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.6',
     ]
 )
