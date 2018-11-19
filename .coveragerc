@@ -1,0 +1,7 @@
+[report]
+omit =
+    setup.py
+    figurehead/__main__.py
+    figurehead/_version.py
+    versioneer.py
+    tests/*
