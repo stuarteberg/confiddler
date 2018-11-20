@@ -33,7 +33,11 @@ install:
   - conda config --add channels flyem-forge
   - conda update -q conda
   - conda install -y conda-build
+  - conda install -c conda-forge codecov
   - conda info -a
 
 script:
   conda build conda-recipe
+
+after_success:
+  - codecov
