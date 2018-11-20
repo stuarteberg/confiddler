@@ -34,7 +34,8 @@ test:
     - pytest-cov
 
   commands:
-    - pytest -s --tb=native --pyargs confiddler.tests
+    - pytest -s --tb=native --cov=confiddler --pyargs confiddler.tests
+    - cp .coverage /tmp/ # for the travis build
 
 about:
   home: https://github.com/stuarteberg/confiddler

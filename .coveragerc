@@ -3,5 +3,8 @@ omit =
     setup.py
     confiddler/__main__.py
     confiddler/_version.py
+    confiddler/tests/*
     versioneer.py
-    tests/*
+
+[run]
+source=confiddler

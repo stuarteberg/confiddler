@@ -40,4 +40,5 @@ script:
   conda build conda-recipe
 
 after_success:
+  - mv /tmp/.coverage .
   - codecov
