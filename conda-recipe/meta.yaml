@@ -29,13 +29,12 @@ requirements:
     {# raw is for ignoring templating with cookiecutter, leaving it for use with conda-build #}
 
 test:
-  source_files:
-    - tests
   requires:
     - pytest
     - pytest-cov
+
   commands:
-    - pytest tests
+    - pytest -s --tb=native --pyargs confiddler.tests
 
 about:
   home: https://github.com/stuarteberg/confiddler

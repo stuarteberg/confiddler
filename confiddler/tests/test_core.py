@@ -81,4 +81,4 @@ def test_inject_default():
 
 
 if __name__ == "__main__":
-    pytest.main(['-s', '--tb=native', '--pyargs', 'tests.test'])
+    pytest.main(['-s', '--tb=native', '--pyargs', 'confiddler.tests.test_core'])

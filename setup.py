@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 import versioneer
 
 requirements = [
@@ -14,7 +14,7 @@ setup(
     author="Stuart Berg",
     author_email='bergs@janelia.hhmi.org',
     url='https://github.com/stuarteberg/confiddler',
-    packages=['confiddler'],
+    packages=find_packages(),
     entry_points={
         'console_scripts': [
             'confiddler=confiddler.cli:cli'
