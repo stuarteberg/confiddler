@@ -3,7 +3,7 @@ confiddler
 
 Utilities for defining, reading, and writing YAML config files. 
 
-[![Travis CI Status](https://travis-ci.org/stuarteberg/confiddler.svg?branch=master)](https://travis-ci.org/stuarteberg/confiddler)
+[![Travis CI Status](https://travis-ci.com/stuarteberg/confiddler.svg?branch=master)](https://travis-ci.com/stuarteberg/confiddler)
 [![Codecov Status](https://codecov.io/gh/stuarteberg/confiddler/branch/master/graph/badge.svg)](https://codecov.io/gh/stuarteberg/confiddler)
 
 - YAML configs.
