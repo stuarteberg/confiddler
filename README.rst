@@ -1,14 +1,14 @@
 ===============================
-figurehead
+confiddler
 ===============================
 
 
-.. image:: https://img.shields.io/travis/stuarteberg/figurehead.svg
-        :target: https://travis-ci.org/stuarteberg/figurehead
-.. image:: https://circleci.com/gh/stuarteberg/figurehead.svg?style=svg
-    :target: https://circleci.com/gh/stuarteberg/figurehead
-.. image:: https://codecov.io/gh/stuarteberg/figurehead/branch/master/graph/badge.svg
-   :target: https://codecov.io/gh/stuarteberg/figurehead
+.. image:: https://img.shields.io/travis/stuarteberg/confiddler.svg
+        :target: https://travis-ci.org/stuarteberg/confiddler
+.. image:: https://circleci.com/gh/stuarteberg/confiddler.svg?style=svg
+    :target: https://circleci.com/gh/stuarteberg/confiddler
+.. image:: https://codecov.io/gh/stuarteberg/confiddler/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/stuarteberg/confiddler
 
 
 Utilities for defining, reading, and writing config files

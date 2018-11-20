@@ -41,15 +41,15 @@ install:
   - conda info
   # this is to ensure dependencies
   - conda build conda.recipe --no-test
-  - conda install --use-local figurehead
+  - conda install --use-local confiddler
 
 
 # Not a .NET project, we build package in the install step instead
 build: false
 
 test_script:
-  - py.test --color=yes -v --cov figurehead --cov-report xml tests
+  - py.test --color=yes -v --cov confiddler --cov-report xml tests
 
 on_success:
   - conda install -c conda-forge codecov
-  - codecov --env PYTHON_VERSION --file C:\projects\figurehead\coverage.xml
+  - codecov --env PYTHON_VERSION --file C:\projects\confiddler\coverage.xml

@@ -42,8 +42,8 @@ def get_config():
     cfg.VCS = "git"
     cfg.style = ""
     cfg.tag_prefix = ""
-    cfg.parentdir_prefix = "figurehead-"
-    cfg.versionfile_source = "figurehead/_version.py"
+    cfg.parentdir_prefix = "confiddler-"
+    cfg.versionfile_source = "confiddler/_version.py"
     cfg.verbose = False
     return cfg
 

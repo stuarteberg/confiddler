@@ -1,6 +1,6 @@
 ---
 exclude_paths:
-  - 'figurehead/_version.py'
+  - 'confiddler/_version.py'
   - 'tests/**/*'
   - 'tests/*'
   - 'benchmarks/**/*'

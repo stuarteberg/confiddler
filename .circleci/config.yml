@@ -25,7 +25,7 @@ jobs:
             conda config --set auto_update_conda no
             conda info -a
             conda build conda.recipe --no-test
-            conda install --use-local figurehead
+            conda install --use-local confiddler
 
       
       # - save_cache:
@@ -38,7 +38,7 @@ jobs:
           name: run tests
           command: |
             # source activate adj
-            pytest --color=yes -v --cov=figurehead tests
+            pytest --color=yes -v --cov=confiddler tests
             conda install -c conda-forge codecov
             codecov
 
