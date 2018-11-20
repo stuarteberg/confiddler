@@ -1,2 +1,2 @@
-from .core import validate, inject_defaults, flow_style
+from .core import load_config, dump_default_config, validate, emit_defaults, flow_style
 from . import json
