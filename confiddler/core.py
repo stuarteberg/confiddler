@@ -9,12 +9,12 @@ from ruamel.yaml.compat import ordereddict
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from ruamel.yaml import YAML
 yaml = YAML()
-yaml.default_flow_style = True
+yaml.default_flow_style = False
 
 from . import json
 
 
-def load_config(path_or_file, schema):
+def load_config(path_or_file, schema={}):
     """
     Load the config data from the given file (or path to a file),
     and validate it against the given schema.
@@ -315,6 +315,7 @@ def flow_style(ob):
     yaml.dump(ob, sio)
     sio.seek(0)
     l = yaml.load(sio)
+    l.fa.set_flow_style()
     assert l.fa.flow_style()
     return l
 
