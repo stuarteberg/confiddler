@@ -5,6 +5,7 @@ from pathlib import Path
 from collections.abc import Mapping
 
 from jsonschema import validators
+from ruamel.yaml.compat import ordereddict
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from ruamel.yaml import YAML
 yaml = YAML()
@@ -130,6 +131,12 @@ def emit_defaults(schema, include_yaml_comments=False, yaml_indent=2, cls=None, 
         cls = validators.validator_for(schema)
     cls.check_schema(schema)
 
+    # By default, jsonschema expects JSON objects to be of type 'dict'.
+    # We also want to permit ruamel.yaml.comments.CommentedSeq and CommentedMap
+    # https://python-jsonschema.readthedocs.io/en/stable/validate/?highlight=str#validating-with-additional-types
+    kwargs["types"] = {"object": (ordereddict, CommentedMap, dict),
+                       "array": (CommentedSeq, list)} # Can't use collections.abc.Sequence because that would catch strings, too!
+    
     # Add default-injection behavior to the validator
     extended_cls = extend_with_default_without_validation(cls, include_yaml_comments, yaml_indent)
     extended_validator = extended_cls(schema, *args, **kwargs)
@@ -164,7 +171,7 @@ def validate(instance, schema, cls=None, *args, inject_defaults=False, **kwargs)
     # By default, jsonschema expects JSON objects to be of type 'dict'.
     # We also want to permit ruamel.yaml.comments.CommentedSeq and CommentedMap
     # https://python-jsonschema.readthedocs.io/en/stable/validate/?highlight=str#validating-with-additional-types
-    kwargs["types"] = {"object": (CommentedMap, dict),
+    kwargs["types"] = {"object": (ordereddict, CommentedMap, dict),
                        "array": (CommentedSeq, list)} # Can't use collections.abc.Sequence because that would catch strings, too!
     
     # Validate and inject defaults.
