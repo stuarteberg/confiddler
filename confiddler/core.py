@@ -5,6 +5,7 @@ from pathlib import Path
 from collections.abc import Mapping
 
 from jsonschema import validators
+from jsonschema.exceptions import _Error
 from ruamel.yaml.compat import ordereddict
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from ruamel.yaml import YAML
@@ -12,6 +13,14 @@ yaml = YAML()
 yaml.default_flow_style = False
 
 from . import json
+
+# Remove comparability of ValidationError and SchemaError,
+# and endow them with hashability instead.
+# Otherwise they can choke pytest.
+# See https://github.com/Julian/jsonschema/issues/477
+_Error.__eq__ = object.__eq__
+_Error.__ne__ = object.__ne__
+_Error.__hash__ = object.__hash__
 
 
 def load_config(path_or_file, schema={}):
