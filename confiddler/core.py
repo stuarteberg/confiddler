@@ -32,6 +32,11 @@ def load_config(path_or_file, schema={}):
     If a setting is missing and the schema contains no default
     value for it, a ValidationError is raised.
     
+    Note:
+        If your config data is already loaded into a dict and
+        you just want to validate it and/or inject defaults,
+        see ``validate()``.
+    
     Args:
         path_or_file:
             The raw config data. Either a file object or a file path.
@@ -99,7 +104,7 @@ def dump_default_config(schema, f=None, format="yaml"): #@ReservedAssignment
         return output_stream.getvalue()
 
 
-def emit_defaults(schema, include_yaml_comments=False, yaml_indent=2, cls=None, *args, **kwargs):
+def emit_defaults(schema, include_yaml_comments=False, yaml_indent=2, base_cls=None, *args, **kwargs):
     """
     Emit all default values for the given schema.
     
@@ -136,19 +141,28 @@ def emit_defaults(schema, include_yaml_comments=False, yaml_indent=2, cls=None, 
     else:
         instance = dict(instance)
     
-    if cls is None:
-        cls = validators.validator_for(schema)
-    cls.check_schema(schema)
+    if base_cls is None:
+        base_cls = validators.validator_for(schema)
+    base_cls.check_schema(schema)
+
+    def is_object(checker, instance):
+        return ( base_cls.TYPE_CHECKER.is_type(instance, "object") or
+                 isinstance(instance, (ordereddict, CommentedMap)) )
+
+    def is_array(checker, instance):
+        return ( base_cls.TYPE_CHECKER.is_type(instance, "array") or
+                 isinstance(instance, CommentedSeq) )
 
     # By default, jsonschema expects JSON objects to be of type 'dict'.
     # We also want to permit ruamel.yaml.comments.CommentedSeq and CommentedMap
-    # https://python-jsonschema.readthedocs.io/en/stable/validate/?highlight=str#validating-with-additional-types
-    kwargs["types"] = {"object": (ordereddict, CommentedMap, dict),
-                       "array": (CommentedSeq, list)} # Can't use collections.abc.Sequence because that would catch strings, too!
-    
+    type_checker = base_cls.TYPE_CHECKER.redefine_many(
+        {"object": is_object, "array": is_array} )
+
+    cls = validators.extend(base_cls, type_checker=type_checker)
+
     # Add default-injection behavior to the validator
-    extended_cls = extend_with_default_without_validation(cls, include_yaml_comments, yaml_indent)
-    extended_validator = extended_cls(schema, *args, **kwargs)
+    cls = extend_with_default_without_validation(cls, include_yaml_comments, yaml_indent)
+    extended_validator = cls(schema, *args, **kwargs)
     
     # Validate the outer-most 
     #extended_validator.VALIDATORS["properties"]
@@ -158,7 +172,7 @@ def emit_defaults(schema, include_yaml_comments=False, yaml_indent=2, cls=None, 
     return instance
 
 
-def validate(instance, schema, cls=None, *args, inject_defaults=False, **kwargs):
+def validate(instance, schema, base_cls=None, *args, inject_defaults=False, **kwargs):
     """
     Drop-in replacement for jsonschema.validate(), with the following extended functionality:
 
@@ -169,22 +183,31 @@ def validate(instance, schema, cls=None, *args, inject_defaults=False, **kwargs)
     See the jsonschema FAQ:
     http://python-jsonschema.readthedocs.org/en/latest/faq/
     """
-    if cls is None:
-        cls = validators.validator_for(schema)
-    cls.check_schema(schema)
+    if base_cls is None:
+        base_cls = validators.validator_for(schema)
+    base_cls.check_schema(schema)
+
+    def is_object(checker, instance):
+        return ( base_cls.TYPE_CHECKER.is_type(instance, "object") or
+                 isinstance(instance, (ordereddict, CommentedMap)) )
+
+    def is_array(checker, instance):
+        return ( base_cls.TYPE_CHECKER.is_type(instance, "array") or
+                 isinstance(instance, CommentedSeq) )
+
+    # By default, jsonschema expects JSON objects to be of type 'dict'.
+    # We also want to permit ruamel.yaml.comments.CommentedSeq and CommentedMap
+    type_checker = base_cls.TYPE_CHECKER.redefine_many(
+        {"object": is_object, "array": is_array} )
+
+    cls = validators.extend(base_cls, type_checker=type_checker)
 
     if inject_defaults:
         # Add default-injection behavior to the validator
         cls = extend_with_default(cls)
-    
-    # By default, jsonschema expects JSON objects to be of type 'dict'.
-    # We also want to permit ruamel.yaml.comments.CommentedSeq and CommentedMap
-    # https://python-jsonschema.readthedocs.io/en/stable/validate/?highlight=str#validating-with-additional-types
-    kwargs["types"] = {"object": (ordereddict, CommentedMap, dict),
-                       "array": (CommentedSeq, list)} # Can't use collections.abc.Sequence because that would catch strings, too!
-    
+        
     # Validate and inject defaults.
-    validator = cls(schema, *args, **kwargs)    
+    validator = cls(schema, *args, **kwargs)
     validator.validate(instance)
 
 
@@ -252,9 +275,10 @@ def extend_with_default_without_validation(validator_class, include_yaml_comment
     def ignore_required(validator, required, instance, schema):
         return
 
-    return validators.extend(validator_class, { "properties" : set_default_object_properties_and_ignore_errors,
-                                                "items": fill_in_default_array_items,
-                                                "required": ignore_required })
+    return validators.extend( validator_class,
+                              { "properties" : set_default_object_properties_and_ignore_errors,
+                                "items": fill_in_default_array_items,
+                                "required": ignore_required } )
 
 
 def _set_default_object_properties(properties, instance, include_yaml_comments, yaml_indent):

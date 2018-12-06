@@ -3,7 +3,7 @@ from io import StringIO
 import pytest
 from ruamel.yaml import YAML
 
-from confiddler import load_config, emit_defaults
+from confiddler import load_config, emit_defaults, validate
 
 yaml = YAML()
 yaml.default_flow_style = False
@@ -52,6 +52,10 @@ def test_emit_defaults():
     assert defaults == { 'mystring': 'DEFAULT',
                          'mynumber': 42 }
 
+    # Make sure defaults still validate
+    # (despite being yaml CommentedMap or whatever)
+    validate(defaults, schema)
+
 
 def test_inject_default():
     schema = {
@@ -77,7 +81,7 @@ def test_inject_default():
     
     cfg = load_config(f, schema)
     assert cfg['mystring'] == 'DEFAULT'
-    
+    validate(cfg, schema)
 
 
 if __name__ == "__main__":
