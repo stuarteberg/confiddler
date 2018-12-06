@@ -164,9 +164,6 @@ def emit_defaults(schema, include_yaml_comments=False, yaml_indent=2, base_cls=N
     cls = extend_with_default_without_validation(cls, include_yaml_comments, yaml_indent)
     extended_validator = cls(schema, *args, **kwargs)
     
-    # Validate the outer-most 
-    #extended_validator.VALIDATORS["properties"]
-    
     # Inject defaults.
     extended_validator.validate(instance)
     return instance
