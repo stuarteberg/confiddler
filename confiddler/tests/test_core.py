@@ -57,6 +57,36 @@ def test_emit_defaults():
     validate(defaults, schema)
 
 
+def test_emit_defaults_with_comments():
+    schema = {
+        'type': 'object',
+        'properties': {
+            'mystring': {
+                'description': 'MYSTRING_DESCRIPTION_TEXT',
+                'type': 'string',
+                'default': 'DEFAULT'
+            },
+            'mynumber': {
+                'description': 'MYNUMBER_DESCRIPTION_TEXT',
+                'type': 'number',
+                'default': 42
+            }
+        },
+        'default': {}
+    }
+    
+    defaults = emit_defaults(schema, include_yaml_comments=True)
+    assert defaults == { 'mystring': 'DEFAULT',
+                         'mynumber': 42 }
+
+    validate(defaults, schema)
+
+    f = StringIO()
+    yaml.dump(defaults, f)
+    assert 'MYSTRING_DESCRIPTION_TEXT' in f.getvalue()
+    assert 'MYNUMBER_DESCRIPTION_TEXT' in f.getvalue()
+
+
 def test_inject_default():
     schema = {
         'type': 'object',
