@@ -324,14 +324,14 @@ def _set_default_object_properties(properties, instance, include_yaml_comments, 
             if property_name not in instance:
                 instance[property_name] = default
         else:
-            if property not in instance:
+            if property_name not in instance:
                 instance[property_name] = "{{NO_DEFAULT}}"
 
         if include_yaml_comments and "description" in subschema:
             comment = '\n' + subschema["description"]
             if comment[-1] == '\n':
                 comment = comment[:-1]
-            instance.yaml_set_comment_before_after_key(property, comment, instance.key_indent)
+            instance.yaml_set_comment_before_after_key(property_name, comment, instance.key_indent)
 
 
 def flow_style(ob):
