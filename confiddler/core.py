@@ -23,28 +23,31 @@ _Error.__ne__ = object.__ne__
 _Error.__hash__ = object.__hash__
 
 
-def load_config(path_or_file, schema={}):
+def load_config(path_or_file, schema={}, inject_defaults=True):
     """
+    Convenience wrapper around :py:func:`validate()`.
+    (This function accepts a file).
+    
     Load the config data from the given file (or path to a file),
     and validate it against the given schema.
     
     All missing values will be inserted from schema defaults.
     If a setting is missing and the schema contains no default
-    value for it, a ValidationError is raised.
+    value for it, a ``ValidationError`` is raised.
     
     Note:
         If your config data is already loaded into a dict and
         you just want to validate it and/or inject defaults,
-        see ``validate()``.
+        see :py:func:`validate()`.
     
     Args:
         path_or_file:
             The raw config data. Either a file object or a file path.
         schema:
-            The config schema, already loaded into a Python dict.
+            The config schema, already loaded into a Python ``dict``.
         
     Returns:
-        dict
+        ``dict``
     """
     assert isinstance(schema, Mapping), \
         "Invalid schema type: should be a dict of jsonschema specs"
@@ -54,7 +57,7 @@ def load_config(path_or_file, schema={}):
 
     def _load_config(f, schema):
         config = yaml.load(f)
-        validate(config, schema, inject_defaults=True)
+        validate(config, schema, inject_defaults=inject_defaults)
         return config
 
     if isinstance(path_or_file, PathLike):
@@ -66,9 +69,11 @@ def load_config(path_or_file, schema={}):
 
 def dump_default_config(schema, f=None, format="yaml"): #@ReservedAssignment
     """
+    Convenience wrapper around :py:func:`emit_defaults()`.
+    (This function writes to a file).
+
     Dump the default config settings from the given schema.
-    Settings without default values will use '{{NO_DEFAULT}}' as a placeholder.
-    
+    Settings without default values will use ``"{{NO_DEFAULT}}"`` as a placeholder.
     
     Args:
         schema:
@@ -76,14 +81,14 @@ def dump_default_config(schema, f=None, format="yaml"): #@ReservedAssignment
 
         f:
             File object to which default config data will be dumped.
-            If None, then the default config is returned as a string.
+            If ``None``, then the default config is returned as a string.
     format:
-        Either "json", "yaml", or "yaml-with-comments".
-        The "yaml-with-comments" format inserts comments above each setting,
-        populated with the setting's "description" field from the schema.
+        Either ``"json"``, ``"yaml"``, or ``"yaml-with-comments"``.
+        The ``"yaml-with-comments"`` format inserts comments above each setting,
+        populated with the setting's ``"description"`` field from the schema.
 
     Returns:
-        None, unless no file was provided, in which
+        ``None``, unless no file was provided, in which
         case the default config is returned as a string.
     """
     assert format in ("json", "yaml", "yaml-with-comments")
@@ -108,22 +113,22 @@ def emit_defaults(schema, include_yaml_comments=False, yaml_indent=2, base_cls=N
     """
     Emit all default values for the given schema.
     
-    Similar to calling validate({}, schema, inject_defaults=True), except:
+    Similar to calling ``validate({}, schema, inject_defaults=True)``, except:
     
     1. Ignore schema validation errors and 'required' property errors
     
-    2. If no default is given for a property, inject '{{NO_DEFAULT}}',
+    2. If no default is given for a property, inject ``"{{NO_DEFAULT}}"``,
        even if the property isn't supposed to be a string.
        
-    3. If include_yaml_comments is True, insert CommentedMap objects instead of ordinary dicts,
-       and insert a comment above each key, with the contents of the property "description" in the schema.
+    3. If ``include_yaml_comments`` is True, insert ``CommentedMap`` objects instead of ordinary dicts,
+       and insert a comment above each key, with the contents of the property ``"description"`` in the schema.
     
     Args:
         schema:
             The schema data to pull defaults from
 
         include_yaml_comments:
-            Whether or not to return ruamel.yaml-compatible dicts so that
+            Whether or not to return ``ruamel.yaml`` objects so that
             comments will be written when the data is dumped to YAML.
     
         yaml_indent:
@@ -173,14 +178,15 @@ def emit_defaults(schema, include_yaml_comments=False, yaml_indent=2, base_cls=N
 
 def validate(instance, schema, base_cls=None, *args, inject_defaults=False, **kwargs):
     """
-    Drop-in replacement for jsonschema.validate(), with the following extended functionality:
+    Drop-in replacement for ``jsonschema.validate()``,
+    with the following extended functionality:
 
-    - Specifically allow types from ruamel.yaml.comments
-    - If inject_defaults is True, this function *modifies* the instance IN-PLACE
+    - Specifically allow types from ``ruamel.yaml.comments``
+    - If ``inject_defaults`` is ``True``, this function *modifies* the instance IN-PLACE
       to fill missing properties with their schema-provided default values.
 
-    See the jsonschema FAQ:
-    http://python-jsonschema.readthedocs.org/en/latest/faq/
+    See the `jsonschema FAQ <http://python-jsonschema.readthedocs.org/en/latest/faq>`_
+    for details and caveats.
     """
     if base_cls is None:
         base_cls = validators.validator_for(schema)
@@ -335,13 +341,44 @@ def _set_default_object_properties(properties, instance, include_yaml_comments, 
 
 def flow_style(ob):
     """
-    Convert the object into its corresponding ruamel.yaml subclass,
-    to alter the yaml pretty printing behavior for this object.
+    This function can be used to fine-tune the format of exported YAML configs.
+    (It is only needed rarely.)
     
-    This allows us to print default configs in yaml 'block style', except for specific
-    values (e.g. int sequences), which look nicer in 'flow style'.
+    By default, :py:func:`dump_default_config()` uses 'block style':
     
-    (For all other uses, the returned ob still looks like a list/dict/whatever)
+    .. code-block:: python
+    
+        >>> schema = {
+              "properties": {
+                 "names": {
+                   "default": ['a', 'b', 'c']
+                 }
+               }
+            }
+
+        >>> dump_default_config(schema, sys.stdout)
+        names:
+        - a
+        - b
+        - c
+    
+    But if you'd prefer for a particular value to be written with 'flow style',
+    wrap it with ``flow_style()``:
+    
+    .. code-block:: python
+    
+        >>> from confiddler import flow_style
+        >>> schema = {
+              "properties": {
+                 "names": {
+                   "default": flow_style(['a', 'b', 'c'])
+                 }
+               }
+            }
+
+        >>> dump_default_config(schema, sys.stdout)
+        names: [a, b, c]
+
     """
     sio = io.StringIO()
     yaml.dump(ob, sio)
