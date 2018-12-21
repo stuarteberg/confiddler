@@ -138,6 +138,8 @@ def emit_defaults(schema, include_yaml_comments=False, yaml_indent=2, base_cls=N
     if include_yaml_comments:
         instance = CommentedMap(instance)
         instance.key_indent = 0 # monkey-patch!
+        if "description" in schema:
+            instance.yaml_set_start_comment('\n' + schema["description"] + '\n\n')
     else:
         instance = dict(instance)
     
