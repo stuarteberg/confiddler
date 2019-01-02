@@ -28,6 +28,7 @@ test:
   requires:
     - pytest
     - pytest-cov
+    - numpy
 
   commands:
     - pytest -s --tb=native --cov=confiddler --pyargs confiddler.tests
