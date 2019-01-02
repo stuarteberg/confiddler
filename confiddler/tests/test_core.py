@@ -5,7 +5,7 @@ from io import StringIO
 import pytest
 from ruamel.yaml import YAML
 
-from confiddler import load_config, emit_defaults, validate, flow_style, ValidationError
+from confiddler import load_config, emit_defaults, validate, dump_default_config, flow_style, ValidationError
 
 yaml = YAML()
 yaml.default_flow_style = False
@@ -130,6 +130,23 @@ def test_emit_defaults():
     # (despite being yaml CommentedMap or whatever)
     validate(defaults, schema)
 
+
+def test_dump_default_config():
+    schema = copy.deepcopy(TEST_SCHEMA)
+    defaults = emit_defaults(schema)
+    
+    # To file object
+    f = StringIO()
+    dump_default_config(schema, f)
+    f.seek(0)
+    
+    assert yaml.load(f) == defaults
+
+    # To string
+    s = dump_default_config(schema)
+    assert s == f.getvalue()
+    
+    
 
 def test_emit_incomplete_defaults():
     schema = copy.deepcopy(TEST_SCHEMA)
