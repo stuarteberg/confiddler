@@ -1,12 +1,34 @@
+import copy
+import tempfile
 from io import StringIO
 
 import pytest
 from ruamel.yaml import YAML
 
-from confiddler import load_config, emit_defaults, validate
+from confiddler import load_config, emit_defaults, validate, flow_style, ValidationError
 
 yaml = YAML()
 yaml.default_flow_style = False
+
+TEST_SCHEMA = {
+        'type': 'object',
+        'required': ['mystring', 'mynumber'],
+        'default': {},
+        'properties': {
+            'mystring': {
+                'type': 'string',
+                'default': 'DEFAULT'
+            },
+            'mynumber': {
+                'type': 'number',
+                'default': 42
+            },
+            'myobject': {
+                'type': 'object',
+                'default': {'inner-string': 'INNER_DEFAULT'}
+            }
+        }
+    }
 
 
 def test_load_empty():
@@ -17,8 +39,10 @@ def test_load_empty():
 
 def test_validate():
     schema = {
-        'mystring': {
-            'type': 'string'
+        'properties': {
+            'mystring': {
+                'type': 'string'
+            }
         }
     }
     
@@ -32,29 +56,96 @@ def test_validate():
     assert cfg['mystring'] == 'Test'
 
 
-def test_emit_defaults():
+def test_failed_validate():
     schema = {
-        'type': 'object',
+        'properties': {
+            'mystring': {
+                'type': 'string'
+            }
+        }
+    }
+    
+    data = {"mystring": 123}
+
+    f = StringIO()
+    yaml.dump(data, f)
+    f.seek(0)
+
+    with pytest.raises(ValidationError):
+        load_config(f, schema)
+
+
+def test_missing_required_property_with_default():
+    schema = {
+        'required': ['mystring'],
         'properties': {
             'mystring': {
                 'type': 'string',
                 'default': 'DEFAULT'
-            },
-            'mynumber': {
-                'type': 'number',
-                'default': 42
             }
-        },
-        'default': {}
+        }
     }
     
+    data = {}
+
+    f = StringIO()
+    yaml.dump(data, f)
+    f.seek(0)
+
+    cfg = load_config(f, schema)
+    assert cfg['mystring'] == "DEFAULT"
+    
+
+def test_missing_required_property_no_default():
+    schema = {
+        'required': ['mystring'],
+        'properties': {
+            'mystring': {
+                'type': 'string',
+                
+                # NO DEFAULT -- really required
+                #'default': 'DEFAULT'
+            }
+        }
+    }
+    
+    data = {}
+
+    f = StringIO()
+    yaml.dump(data, f)
+    f.seek(0)
+
+    with pytest.raises(ValidationError):
+        load_config(f, schema)
+
+
+def test_emit_defaults():
+    schema = copy.deepcopy(TEST_SCHEMA)
     defaults = emit_defaults(schema)
     assert defaults == { 'mystring': 'DEFAULT',
-                         'mynumber': 42 }
+                         'mynumber': 42,
+                         'myobject': {'inner-string': 'INNER_DEFAULT'} }
 
     # Make sure defaults still validate
     # (despite being yaml CommentedMap or whatever)
     validate(defaults, schema)
+
+
+def test_emit_incomplete_defaults():
+    schema = copy.deepcopy(TEST_SCHEMA)
+    
+    # Delete the default for 'mynumber'
+    del schema['properties']['mynumber']['default']
+    
+    defaults = emit_defaults(schema)
+    assert defaults == { 'mystring': 'DEFAULT',
+                         'mynumber': '{{NO_DEFAULT}}',
+                         'myobject': {'inner-string': 'INNER_DEFAULT'} }
+
+    # The '{{NO_DEFAULT}}' setting doesn't validate.
+    # That's okay.
+    with pytest.raises(ValidationError):
+        validate(defaults, schema)
 
 
 def test_emit_defaults_with_comments():
@@ -87,22 +178,21 @@ def test_emit_defaults_with_comments():
     assert 'MYNUMBER_DESCRIPTION_TEXT' in f.getvalue()
 
 
-def test_inject_default():
-    schema = {
-        'type': 'object',
-        'properties': {
-            'mystring': {
-                'type': 'string',
-                'default': 'DEFAULT'
-            },
-            'mynumber': {
-                'type': 'number',
-                'default': 42
-            }
-        },
-        'default': {}
-    }
+def test_emit_defaults_with_flow_style():
+    schema = copy.deepcopy(TEST_SCHEMA)
+    d = schema['properties']['myobject']['default']
+    schema['properties']['myobject']['default'] = flow_style(d)
 
+    defaults = emit_defaults(schema)
+    assert defaults['myobject'].fa.flow_style()
+
+    # Make sure defaults still validate
+    # (despite being yaml CommentedMap or whatever)
+    validate(defaults, schema)
+
+
+def test_inject_default():
+    schema = copy.deepcopy(TEST_SCHEMA)
     data = {'mynumber': 10}
 
     f = StringIO()
@@ -111,7 +201,61 @@ def test_inject_default():
     
     cfg = load_config(f, schema)
     assert cfg['mystring'] == 'DEFAULT'
+    assert cfg['myobject']['inner-string'] == 'INNER_DEFAULT'
+    assert cfg['myobject'].from_default == True
     validate(cfg, schema)
+
+
+def test_inject_default_array_item_objects():
+    """
+    Users can specify that items of an array should be objects,
+    with a particular schema.  If that item schema specifies default properties,
+    then those properties will be injected into any objects in the list (if the user ommitted them).
+    
+    The NUMBER of items must be chosen by the user,
+    but the contents of the items is determined by the default schema.
+    """
+    schema = {
+        'type': 'array',
+        'items': {
+            'type': 'object',
+            'default': {},
+            'properties': {
+                'foo': {
+                    'default': 'bar'
+                    }
+                }
+            }
+        }
+    
+    # The first object in this array is completely specified
+    # by the user, but the remaining two will be "filled in"
+    # with the defaults from the item schema.
+    data = [{'foo': 'MYFOO'}, {}, {}]
+    
+    f = StringIO()
+    yaml.dump(data, f)
+    f.seek(0)
+    
+    cfg = load_config(f, schema)
+    assert cfg == [{'foo': 'MYFOO'},
+                   {'foo': 'bar'},
+                   {'foo': 'bar'}]
+    assert not cfg[0].from_default
+    assert cfg[1].from_default
+    assert cfg[2].from_default
+
+
+def test_load_from_path():
+    d = tempfile.mkdtemp()
+    config = {'mynumber': 99}
+    path = f'{d}/test_load_from_path.yaml'
+    with open(path, 'w') as f:
+        yaml.dump(config, f)
+    
+    loaded = load_config(path, TEST_SCHEMA, True)
+    assert loaded['mynumber'] == 99
+    assert loaded['mystring'] == "DEFAULT"
 
 
 if __name__ == "__main__":

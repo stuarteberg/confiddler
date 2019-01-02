@@ -5,7 +5,7 @@ from pathlib import Path
 from collections.abc import Mapping
 
 from jsonschema import validators
-from jsonschema.exceptions import _Error
+from jsonschema.exceptions import _Error, ValidationError
 from ruamel.yaml.compat import ordereddict
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from ruamel.yaml import YAML
@@ -229,8 +229,9 @@ def extend_with_default(validator_class):
     (The results of this function are not meant for pretty-printing.)
     """
     validate_properties = validator_class.VALIDATORS["properties"]
+    validate_items = validator_class.VALIDATORS["items"]
 
-    def _set_defaults(properties, instance):
+    def _set_property_defaults(properties, instance):
         for property_name, subschema in properties.items():
             if "default" in subschema:
                 default = copy.deepcopy(subschema["default"])
@@ -240,11 +241,42 @@ def extend_with_default(validator_class):
                 instance.setdefault(property_name, default)
 
     def set_defaults_and_validate(validator, properties, instance, schema):
-        _set_defaults(properties, instance)
+        _set_property_defaults(properties, instance)
         for error in validate_properties(validator, properties, instance, schema):
             yield error
 
-    return validators.extend(validator_class, {"properties" : set_defaults_and_validate})
+    def fill_in_default_array_items(validator, items_schema, instance, schema):
+        new_items = []
+        for item in instance:
+            if "default" in items_schema:
+                default = copy.deepcopy(items_schema["default"])
+                if isinstance(default, dict):
+                    default = _Dict(default)
+                    if item == {}:
+                        default.from_default = True
+                    default.update(item)
+                    new_items.append(default)
+
+        instance.clear()
+        instance.extend(new_items)
+
+        # Descend into array list
+        for error in validate_items(validator, items_schema, instance, schema):
+            yield error
+
+
+    def check_required(validator, required, instance, schema):
+        # We only check 'required' properties that don't have specified defaults
+        for prop in required:
+            if prop in instance:
+                continue
+            if prop not in schema['properties'] or 'default' not in schema['properties'][prop]:
+                yield ValidationError("%r is a required property and has no default value in your schema" % prop)
+
+
+    return validators.extend(validator_class, {"properties" : set_defaults_and_validate,
+                                               "items": fill_in_default_array_items,
+                                               "required": check_required})
 
 
 def extend_with_default_without_validation(validator_class, include_yaml_comments=False, yaml_indent=2):
