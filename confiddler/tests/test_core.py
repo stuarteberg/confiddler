@@ -119,6 +119,28 @@ def test_missing_required_property_no_default():
         load_config(f, schema)
 
 
+def test_load_list():
+    """
+    Make sure lists can be loaded properly
+    (e.g. that it isn't overwritten with the default, etc.)
+    """
+    schema = copy.deepcopy(TEST_SCHEMA)
+    schema['properties']['mylist'] = {
+        'type': 'array',
+        'items': {'type': 'string'},
+        'default': []
+    }
+    
+    data = {'mylist': ['a', 'b', 'c']}
+
+    f = StringIO()
+    yaml.dump(data, f)
+    f.seek(0)
+    
+    cfg = load_config(f, schema)
+    assert cfg['mylist'] == list('abc')
+
+
 def test_emit_defaults():
     schema = copy.deepcopy(TEST_SCHEMA)
     defaults = emit_defaults(schema)

@@ -246,19 +246,23 @@ def extend_with_default(validator_class):
             yield error
 
     def fill_in_default_array_items(validator, items_schema, instance, schema):
-        new_items = []
-        for item in instance:
-            if "default" in items_schema:
-                default = copy.deepcopy(items_schema["default"])
-                if isinstance(default, dict):
+        if "default" in items_schema and isinstance(items_schema["default"], Mapping):
+            new_items = []
+            for item in instance:
+                if not isinstance(item, Mapping):
+                    new_items.append(item)
+                else:
+                    default = copy.deepcopy(items_schema["default"])
                     default = _Dict(default)
                     if item == {}:
+                        # FIXME: Instead of a simple bool, it would be better to specify
+                        #        WHICH properties in this dict were copied from the default value.
                         default.from_default = True
                     default.update(item)
                     new_items.append(default)
 
-        instance.clear()
-        instance.extend(new_items)
+            instance.clear()
+            instance.extend(new_items)
 
         # Descend into array list
         for error in validate_items(validator, items_schema, instance, schema):
