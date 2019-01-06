@@ -26,7 +26,7 @@ requirements:
 
 test:
   requires:
-    - pytest
+    - pytest 4.0.*
     - pytest-cov
     - numpy
 
