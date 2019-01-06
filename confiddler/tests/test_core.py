@@ -5,7 +5,7 @@ from io import StringIO
 import pytest
 from ruamel.yaml import YAML
 
-from confiddler import load_config, emit_defaults, validate, dump_default_config, flow_style, ValidationError
+from confiddler import load_config, emit_defaults, validate, dump_default_config, flow_style, ValidationError, convert_to_base_types
 
 yaml = YAML()
 yaml.default_flow_style = False
@@ -295,6 +295,18 @@ def test_load_from_path():
     loaded = load_config(path, TEST_SCHEMA, True)
     assert loaded['mynumber'] == 99
     assert loaded['mystring'] == "DEFAULT"
+
+
+def test_convert_to_base_types():
+    d = yaml.load('{"a": [1,2,3], "b": {"x": 1, "y": 2}}')
+    assert type(d) != dict
+    assert type(d['a']) != list
+    assert type(d['b']) != dict
+
+    d2 = convert_to_base_types(d)
+    assert type(d2) == dict
+    assert type(d2['a']) == list
+    assert type(d2['b']) == dict
 
 
 if __name__ == "__main__":

@@ -1,3 +1,3 @@
 from jsonschema import ValidationError
-from .core import load_config, dump_default_config, validate, emit_defaults, flow_style
+from .core import load_config, dump_default_config, validate, emit_defaults, flow_style, convert_to_base_types
 from . import json

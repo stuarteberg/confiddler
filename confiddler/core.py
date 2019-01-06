@@ -2,7 +2,7 @@ import io
 import copy
 from os import PathLike
 from pathlib import Path
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 from jsonschema import validators
 from jsonschema.exceptions import _Error, ValidationError
@@ -423,6 +423,19 @@ def flow_style(ob):
     l.fa.set_flow_style()
     assert l.fa.flow_style()
     return l
+
+
+def convert_to_base_types(o):
+    """
+    Convert the given container into a standard dict or list (recursively).
+    This is useful if you need to pass your config to a function that is
+    hard-coded to check for dicts or lists rather than Mapping or Sequence.
+    """
+    if type(o) != dict and isinstance(o, Mapping):
+        return { k: convert_to_base_types(v) for k,v in o.items() }
+    if type(o) not in (list, str, bytes) and isinstance(o, Sequence):
+        return [convert_to_base_types(i) for i in o]
+    return o
 
 
 class _Dict(dict):
