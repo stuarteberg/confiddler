@@ -8,7 +8,7 @@ from jsonschema import validators
 from jsonschema.exceptions import _Error, ValidationError
 from ruamel.yaml.compat import ordereddict
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
-from ruamel.yaml import YAML
+from ruamel.yaml import YAML, RoundTripRepresenter
 yaml = YAML()
 yaml.default_flow_style = False
 
@@ -468,3 +468,4 @@ class _Dict(dict):
         super().__init__(*args, **kwargs)
         self.from_default = False
 
+RoundTripRepresenter.add_representer(_Dict, RoundTripRepresenter.represent_dict)
