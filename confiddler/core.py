@@ -67,6 +67,25 @@ def load_config(path_or_file, schema={}, inject_defaults=True):
         return _load_config(path_or_file, schema)
 
 
+def dump_config(config_data, path_or_file=None):
+    """
+    Convenience wrapper for YAML().dump()
+
+    Dump the given config data to the given path or file.
+    If no path or file is given, return it as a string.
+    """
+    if path_or_file is None:
+        f = io.StringIO()
+        yaml.dump(config_data, f)
+        f.seek(0)
+        return f.getvalue()
+    elif isinstance(path_or_file, PathLike):
+        with open(path_or_file, 'w') as f:
+            yaml.dump(config_data, f)
+    else:
+        yaml.dump(config_data, path_or_file)
+
+
 def dump_default_config(schema, f=None, format="yaml"): #@ReservedAssignment
     """
     Convenience wrapper around :py:func:`emit_defaults()`.

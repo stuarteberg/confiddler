@@ -1,11 +1,13 @@
 import copy
+import textwrap
 import tempfile
 from io import StringIO
 
 import pytest
 from ruamel.yaml import YAML
 
-from confiddler import load_config, emit_defaults, validate, dump_default_config, flow_style, ValidationError, convert_to_base_types
+from confiddler import (load_config, emit_defaults, validate, dump_default_config,
+                        flow_style, ValidationError, convert_to_base_types, dump_config)
 
 yaml = YAML()
 yaml.default_flow_style = False
@@ -308,6 +310,14 @@ def test_convert_to_base_types():
     assert type(d2['a']) == list
     assert type(d2['b']) == dict
 
+
+def test_dump_config():
+    data = {'a': flow_style([1,2,3])}
+    dumped = dump_config(data)
+    expected = textwrap.dedent("""\
+        a: [1, 2, 3]
+    """)
+    assert dumped == expected
 
 if __name__ == "__main__":
     pytest.main(['-s', '--tb=native', '--pyargs', 'confiddler.tests.test_core'])
