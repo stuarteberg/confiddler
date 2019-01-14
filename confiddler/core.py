@@ -79,7 +79,7 @@ def dump_config(config_data, path_or_file=None):
         yaml.dump(config_data, f)
         f.seek(0)
         return f.getvalue()
-    elif isinstance(path_or_file, PathLike):
+    elif isinstance(path_or_file, (str, PathLike)):
         with open(path_or_file, 'w') as f:
             yaml.dump(config_data, f)
     else:
