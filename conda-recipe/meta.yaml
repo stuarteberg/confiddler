@@ -37,3 +37,5 @@ test:
 about:
   home: https://github.com/stuarteberg/confiddler
   summary: Utilities for defining, reading, and writing config files
+  license: BSD-3-Clause
+  license_file: LICENSE
