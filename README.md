@@ -6,7 +6,6 @@ Schema-checked YAML config files, with default values for missing fields.
 
 [![image](https://img.shields.io/pypi/pyversions/confiddler.svg)](https://pypi.org/project/confiddler/)
 [![Travis CI Status](https://travis-ci.com/stuarteberg/confiddler.svg?branch=master)](https://travis-ci.com/stuarteberg/confiddler)
-[![Codecov Status](https://codecov.io/gh/stuarteberg/confiddler/branch/master/graph/badge.svg)](https://codecov.io/gh/stuarteberg/confiddler)
 [![Documentation Status](https://readthedocs.org/projects/confiddler/badge/?version=latest)](https://confiddler.readthedocs.io/en/latest/?badge=latest)
 
 
