@@ -15,7 +15,7 @@ The Basic Idea
 1. Define your config file structure with a [JSON schema](json-schema.org).
 
 
-2. Help your users get started by showing them a **default config file** which is:
+2. Help your users get started by showing them a **auto-commented default config** which is:
    
    - auto-generated from your defaults, and 
    - auto-commented with your schema `description`.
