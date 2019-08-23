@@ -18,10 +18,10 @@ The Basic Idea
 2. Help your users get started by showing them a **default config file** which is:
    
    - auto-generated from your defaults, and 
-   - auto-commented with your schema ``description``.
+   - auto-commented with your schema `description`.
 
 
-3. Load a user's config file with :py:func:`confiddler.load_config()`, which will:
+3. Load a user's config file with `load_config()`, which will:
 
      - validate it against your schema
      - auto-inject default values for any settings the user omitted
