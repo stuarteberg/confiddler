@@ -27,6 +27,21 @@ The Basic Idea
      - auto-inject default values for any settings the user omitted
 
 
+Install
+-------
+
+Install from PyPI:
+
+```
+pip install confiddler
+```
+
+...or with conda:
+
+```
+conda install -c stuarteberg -c conda-forge confiddler
+```
+
 Quickstart
 ----------
 

@@ -38,9 +38,17 @@ See the :ref:`Quickstart <quickstart>` for a short example.
 Install
 -------
 
+Install from PyPI:
+
 .. code-block:: bash
 
-    conda install -c flyem-forge confiddler
+    pip install confiddler
+
+...or with conda:
+
+.. code-block:: bash
+
+    conda install -c stuarteberg -c conda-forge confiddler
 
 
 Contents
