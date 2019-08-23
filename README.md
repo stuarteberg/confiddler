@@ -30,7 +30,7 @@ The Basic Idea
 Quickstart
 ----------
 
-Define your schema
+### Define your schema
 
 ```python
 >>> from confiddler import dump_default_config, load_config
@@ -55,7 +55,7 @@ Define your schema
     }
 ```
 
-Show your user the default config.
+### Show your user the default config.
 
 ```python
 >>> dump_default_config(schema, sys.stdout, 'yaml')
@@ -74,7 +74,7 @@ speed: 1
 movement: random
 ```
 
-Load your user's config.
+### Load your user's config.
 
 ```yaml
 # my-robot-config.yaml
