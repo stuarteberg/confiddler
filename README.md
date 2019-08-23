@@ -12,7 +12,7 @@ Schema-checked YAML config files, with default values for missing fields.
 The Basic Idea
 --------------
 
-1. Define your config file structure with a [JSON schema](json-schema.org).
+1. Define your config file structure with a [JSON schema](http://json-schema.org).
 
 
 2. Help your users get started by showing them a **auto-commented default config** which is:
