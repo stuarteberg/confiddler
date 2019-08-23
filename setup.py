@@ -15,11 +15,6 @@ setup(
     author_email='bergs@janelia.hhmi.org',
     url='https://github.com/stuarteberg/confiddler',
     packages=find_packages(),
-    entry_points={
-        'console_scripts': [
-            'confiddler=confiddler.cli:cli'
-        ]
-    },
     install_requires=requirements,
     keywords='confiddler',
     classifiers=[
