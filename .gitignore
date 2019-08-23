@@ -64,6 +64,7 @@ target/
 # Eclipse
 .project
 .pydevproject
+.settings
 
 # test output
 junit.xml
