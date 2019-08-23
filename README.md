@@ -13,9 +13,7 @@ Schema-checked YAML config files, with default values for missing fields.
 The Basic Idea
 --------------
 
-1. Define your config file structure with a JSON schema.
-   (See `json-schema.org <https://json-schema.org>`_ or
-   `jsonschema <http://python-jsonschema.readthedocs.org>`_).
+1. Define your config file structure with a [JSON schema](json-schema.org).
 
 
 2. Help your users get started by showing them a **default config file** which is:
