@@ -381,10 +381,10 @@ def _set_default_object_properties(properties, instance, include_yaml_comments, 
                 default.key_indent = instance.key_indent + yaml_indent
                 default.from_default = True
 
-            if property_name not in instance:
+            if isinstance(instance, Mapping) and property_name not in instance:
                 instance[property_name] = default
         else:
-            if property_name not in instance:
+            if isinstance(instance, Mapping) and property_name not in instance:
                 instance[property_name] = "{{NO_DEFAULT}}"
 
         if include_yaml_comments and "description" in subschema:
