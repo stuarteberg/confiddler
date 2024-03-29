@@ -18,8 +18,4 @@ setup(
     python_requires=">=3.6",
     install_requires=requirements,
     keywords='confiddler',
-    classifiers=[
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-    ]
 )
