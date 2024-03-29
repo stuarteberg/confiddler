@@ -252,16 +252,12 @@ def extend_with_default(validator_class):
 
     def _set_property_defaults(properties, instance):
         for property_name, subschema in properties.items():
-            if "default" in subschema:
+            if isinstance(instance, Mapping) and "default" in subschema:
                 default = copy.deepcopy(subschema["default"])
                 if isinstance(default, dict):
                     default = _Dict(default)
                     default.from_default = True
-                try:
-                    instance.setdefault(property_name, default)
-                except:
-                    print(instance)
-                    raise
+                instance.setdefault(property_name, default)
 
     def set_defaults_and_validate(validator, properties_schema, instance, schema):
         _set_property_defaults(properties_schema, instance)
@@ -269,7 +265,7 @@ def extend_with_default(validator_class):
             yield error
 
     def set_additional_props_defaults_and_validate(validator, additionalProperties_schema, instance, schema):
-        if additionalProperties_schema in (True, False, None):
+        if additionalProperties_schema in (True, False, None) or additionalProperties_schema.get('type', 'object') != 'object':
             for error in validate_additionalProperties(validator, additionalProperties_schema, instance, schema):
                 yield error
         else:
