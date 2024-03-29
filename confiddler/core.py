@@ -149,23 +149,19 @@ def emit_defaults(schema, include_yaml_comments=False, yaml_indent=2, base_cls=N
         include_yaml_comments:
             Whether or not to return ``ruamel.yaml`` objects so that
             comments will be written when the data is dumped to YAML.
-    
+
         yaml_indent:
             To ensure correctly indented comments, you must specify the indent
             step you plan to use when this data is eventually dumped as yaml.
-    
+
     Returns:
         A copy of instance, with default values injected, and comments if specified.
     """
     instance = {}
     
-    if include_yaml_comments:
-        instance = CommentedMap(instance)
-        instance.key_indent = 0 # monkey-patch!
-        if "description" in schema:
-            instance.yaml_set_start_comment('\n' + schema["description"] + '\n\n')
-    else:
-        instance = dict(instance)
+    instance = convert_to_commented(instance, 0, yaml_indent)
+    if "description" in schema:
+        instance.yaml_set_start_comment('\n' + schema["description"] + '\n\n')
     
     if base_cls is None:
         base_cls = validators.validator_for(schema)
@@ -187,11 +183,14 @@ def emit_defaults(schema, include_yaml_comments=False, yaml_indent=2, base_cls=N
     cls = validators.extend(base_cls, type_checker=type_checker)
 
     # Add default-injection behavior to the validator
-    cls = extend_with_default_without_validation(cls, include_yaml_comments, yaml_indent)
+    cls = extend_with_default_without_validation(cls, yaml_indent)
     extended_validator = cls(schema, *args, **kwargs)
-    
+
     # Inject defaults.
     extended_validator.validate(instance)
+
+    if not include_yaml_comments:
+        instance = convert_to_commented(instance, 0, yaml_indent, strip_comments=True)
     return instance
 
 
@@ -248,6 +247,7 @@ def extend_with_default(validator_class):
     (The results of this function are not meant for pretty-printing.)
     """
     validate_properties = validator_class.VALIDATORS["properties"]
+    validate_additionalProperties = validator_class.VALIDATORS["additionalProperties"]
     validate_items = validator_class.VALIDATORS["items"]
 
     def _set_property_defaults(properties, instance):
@@ -257,12 +257,33 @@ def extend_with_default(validator_class):
                 if isinstance(default, dict):
                     default = _Dict(default)
                     default.from_default = True
-                instance.setdefault(property_name, default)
+                try:
+                    instance.setdefault(property_name, default)
+                except:
+                    print(instance)
+                    raise
 
-    def set_defaults_and_validate(validator, properties, instance, schema):
-        _set_property_defaults(properties, instance)
-        for error in validate_properties(validator, properties, instance, schema):
+    def set_defaults_and_validate(validator, properties_schema, instance, schema):
+        _set_property_defaults(properties_schema, instance)
+        for error in validate_properties(validator, properties_schema, instance, schema):
             yield error
+
+    def set_additional_props_defaults_and_validate(validator, additionalProperties_schema, instance, schema):
+        if additionalProperties_schema in (True, False, None):
+            for error in validate_additionalProperties(validator, additionalProperties_schema, instance, schema):
+                yield error
+        else:
+            # Figure out which of the instance's properties are not named by
+            # the properties schema and therefore count as 'additionalProperties'
+            extra_prop_names = set(instance.keys()) - set(schema.get('properties', {}).keys())
+
+            # To re-use _set_property_defaults function to insert defaults into the 'additional' properties,
+            # we'll duplicate the schema for each additional name.
+            extra_prop_schemas = {k: additionalProperties_schema for k in extra_prop_names}
+            _set_property_defaults(extra_prop_schemas, instance)
+
+            for error in validate_properties(validator, extra_prop_schemas, instance, {"properties": extra_prop_schemas, "default": schema.get("default", {})}):
+                yield error
 
     def fill_in_default_array_items(validator, items_schema, instance, schema):
         if "default" in items_schema and isinstance(items_schema["default"], Mapping):
@@ -296,52 +317,88 @@ def extend_with_default(validator_class):
             if prop not in schema['properties'] or 'default' not in schema['properties'][prop]:
                 yield ValidationError("%r is a required property and has no default value in your schema" % prop)
 
+    return validators.extend(
+        validator_class,
+        {
+            "properties" : set_defaults_and_validate,
+            "additionalProperties": set_additional_props_defaults_and_validate,
+            "items": fill_in_default_array_items,
+            "required": check_required
+        }
+    )
 
-    return validators.extend(validator_class, {"properties" : set_defaults_and_validate,
-                                               "items": fill_in_default_array_items,
-                                               "required": check_required})
 
-
-def extend_with_default_without_validation(validator_class, include_yaml_comments=False, yaml_indent=2):
+def extend_with_default_without_validation(validator_class, yaml_indent=2):
     """
     Helper function for emit_defaults(), above.
     Similar to extend_with_default(), but does not validate
     (errors are ignored) and also uses yaml types (for printing).
     """
     validate_properties = validator_class.VALIDATORS["properties"]
+    validate_additionalProperties = validator_class.VALIDATORS["additionalProperties"]
     validate_items = validator_class.VALIDATORS["items"]
 
     def set_default_object_properties_and_ignore_errors(validator, properties, instance, schema):
-        _set_default_object_properties(properties, instance, include_yaml_comments, yaml_indent)
+        _set_default_object_properties(properties, instance, yaml_indent)
         for _error in validate_properties(validator, properties, instance, schema):
             # Ignore validation errors
             pass
 
-    def fill_in_default_array_items(validator, items, instance, schema):
-        if include_yaml_comments and items["type"] == "object":
+    def set_default_additionalProperties_and_ignore_errors(validator, additionalProperties, instance, schema):
+        if additionalProperties in (True, False, None):
+            for _error in validate_additionalProperties(validator, additionalProperties, instance, schema):
+                # Ignore validation errors
+                pass
+        else:
+            # Figure out which of the instance's properties are not named by
+            # the properties schema and therefore count as 'additionalProperties'
+            extra_prop_names = set(instance.keys()) - set(schema.get('properties', {}).keys())
+
+            # To re-use _set_property_defaults function to insert defaults into the 'additional' properties,
+            # we'll duplicate the schema for each additional name.
+            extra_prop_schemas = {k: additionalProperties for k in extra_prop_names}
+
+            _set_default_object_properties(extra_prop_schemas, instance, yaml_indent)
+            for _error in validate_properties(validator, extra_prop_schemas, instance, {"properties": extra_prop_schemas, "default": schema.get("default", {})}):
+                # Ignore validation errors
+                pass
+
+    def fill_in_default_array_items(validator, items_schema, instance, schema):
+        if "default" in items_schema and isinstance(items_schema["default"], Mapping):
             new_items = []
             for item in instance:
-                new_item = CommentedMap(item)
-                new_item.key_indent = instance.key_indent + yaml_indent
-                new_items.append(new_item)
+                if not isinstance(item, Mapping):
+                    new_items.append(item)
+                else:
+                    default = convert_to_commented(items_schema["default"], instance.key_indent + yaml_indent, yaml_indent)
+                    new_item = convert_to_commented(item, instance.key_indent + yaml_indent, yaml_indent)
+                    if item == {}:
+                        default.from_default = True
+                    default.update(new_item)
+                    new_items.append(default)
             instance.clear()
             instance.extend(new_items)
 
         # Descend into array list
-        for _error in validate_items(validator, items, instance, schema):
+        for _error in validate_items(validator, items_schema, instance, schema):
             # Ignore validation errors
             pass
 
     def ignore_required(validator, required, instance, schema):
         return
 
-    return validators.extend( validator_class,
-                              { "properties" : set_default_object_properties_and_ignore_errors,
-                                "items": fill_in_default_array_items,
-                                "required": ignore_required } )
+    return validators.extend(
+        validator_class,
+        {
+            "properties" : set_default_object_properties_and_ignore_errors,
+            "additionalProperties" : set_default_additionalProperties_and_ignore_errors,
+            "items": fill_in_default_array_items,
+            "required": ignore_required
+        }
+    )
 
 
-def _set_default_object_properties(properties, instance, include_yaml_comments, yaml_indent):
+def _set_default_object_properties(properties, instance, yaml_indent):
     """
     Helper for extend_with_default_without_validation().
     Inject default values for the given object properties on the given instance.
@@ -350,9 +407,16 @@ def _set_default_object_properties(properties, instance, include_yaml_comments, 
         if instance == "{{NO_DEFAULT}}":
             continue
         
+        # In tricky cases such as {oneOf: [{type: object, type: str}]},
+        # then the 'instance' may not be valid for the particular 'oneOf' schema we're looking at.
+        if not isinstance(instance, (list, dict)):
+            continue
+
         if "default" in subschema:
-            default = copy.deepcopy(subschema["default"])
-            
+            if isinstance(subschema["default"], (dict, list)):
+                subschema["default"] = convert_to_commented(subschema["default"], instance.key_indent + yaml_indent, yaml_indent)
+            default = convert_to_commented(subschema["default"], instance.key_indent + yaml_indent, yaml_indent)
+
             if isinstance(default, list):
                 try:
                     # Lists of numbers should use 'flow style'
@@ -364,22 +428,6 @@ def _set_default_object_properties(properties, instance, include_yaml_comments, 
                         default = flow_style(default)
                 except KeyError:
                     pass
-            
-            if include_yaml_comments and isinstance(default, dict):
-                default = CommentedMap(default)
-                # To keep track of the current indentation level,
-                # we just monkey-patch this member onto the dict.
-                default.key_indent = instance.key_indent + yaml_indent
-                default.from_default = True
-
-            if include_yaml_comments and isinstance(default, list):
-                if not isinstance(default, CommentedSeq):
-                    default = CommentedSeq(copy.copy(default))
-                
-                # To keep track of the current indentation level,
-                # we just monkey-patch this member onto the dict.
-                default.key_indent = instance.key_indent + yaml_indent
-                default.from_default = True
 
             if isinstance(instance, Mapping) and property_name not in instance:
                 instance[property_name] = default
@@ -387,7 +435,7 @@ def _set_default_object_properties(properties, instance, include_yaml_comments, 
             if isinstance(instance, Mapping) and property_name not in instance:
                 instance[property_name] = "{{NO_DEFAULT}}"
 
-        if include_yaml_comments and "description" in subschema:
+        if "description" in subschema:
             comment = '\n' + subschema["description"]
             if comment[-1] == '\n':
                 comment = comment[:-1]
@@ -442,6 +490,41 @@ def flow_style(ob):
     l.fa.set_flow_style()
     assert l.fa.flow_style()
     return l
+
+
+def convert_to_commented(o, key_indent, indent_increment, strip_comments=False):
+    """
+    Recurse into the given list or dict and convert all
+    dicts within it to CommentedMap or CommentedSeq,
+    and monkey-patch a 'key_indent' property onto it.
+    """
+    o = copy.deepcopy(o)
+    return _convert_to_commented(o, key_indent, indent_increment, strip_comments)
+
+
+def _convert_to_commented(o, key_indent, indent_increment, strip_comments=False):
+    # We take pains to preserve the parent object if it is already a CommentedMap,
+    # so we also preserve any flags it has, such as o.fa.flow_style() or o.from_default
+    if isinstance(o, Mapping):
+        for k in o.keys():
+            o[k] = _convert_to_commented(o[k], key_indent + indent_increment, indent_increment)
+        if not isinstance(o, CommentedMap):
+            o = CommentedMap(o)
+        o.key_indent = key_indent
+        if strip_comments and hasattr(o, 'ca'):
+            o.ca.items.clear()
+        return o
+    elif isinstance(o, list):
+        for i in range(len(o)):
+            o[i] = _convert_to_commented(o[i], key_indent + indent_increment, indent_increment)
+        if not isinstance(CommentedSeq):
+            o = CommentedSeq(o)
+        o.key_indent = key_indent
+        if strip_comments and hasattr(o, 'ca'):
+            o.ca.items.clear()
+        return o
+    else:
+        return o
 
 
 def convert_to_base_types(o):
