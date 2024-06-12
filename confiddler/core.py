@@ -513,7 +513,7 @@ def _convert_to_commented(o, key_indent, indent_increment, strip_comments=False)
     elif isinstance(o, list):
         for i in range(len(o)):
             o[i] = _convert_to_commented(o[i], key_indent + indent_increment, indent_increment)
-        if not isinstance(CommentedSeq):
+        if not isinstance(o, CommentedSeq):
             o = CommentedSeq(o)
         o.key_indent = key_indent
         if strip_comments and hasattr(o, 'ca'):
