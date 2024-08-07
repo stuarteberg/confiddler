@@ -507,7 +507,7 @@ def _convert_to_commented(o, key_indent, indent_increment, strip_comments=False)
     # so we also preserve any flags it has, such as o.fa.flow_style() or o.from_default
     if isinstance(o, Mapping):
         for k in o.keys():
-            o[k] = _convert_to_commented(o[k], key_indent + indent_increment, indent_increment)
+            o[k] = _convert_to_commented(o[k], key_indent + indent_increment, indent_increment, strip_comments)
         if not isinstance(o, CommentedMap):
             o = CommentedMap(o)
         o.key_indent = key_indent
@@ -516,7 +516,7 @@ def _convert_to_commented(o, key_indent, indent_increment, strip_comments=False)
         return o
     elif isinstance(o, list):
         for i in range(len(o)):
-            o[i] = _convert_to_commented(o[i], key_indent + indent_increment, indent_increment)
+            o[i] = _convert_to_commented(o[i], key_indent + indent_increment, indent_increment, strip_comments)
         if not isinstance(o, CommentedSeq):
             o = CommentedSeq(o)
         o.key_indent = key_indent
