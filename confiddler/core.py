@@ -345,6 +345,10 @@ def extend_with_default_without_validation(validator_class, yaml_indent=2):
             for _error in validate_additionalProperties(validator, additionalProperties, instance, schema):
                 # Ignore validation errors
                 pass
+        elif instance == '{{NO_DEFAULT}}':
+            return
+        elif not isinstance(instance, Mapping):
+            raise ValidationError(f"Expected an object for '{instance}', not ({type(instance)})")
         else:
             # Figure out which of the instance's properties are not named by
             # the properties schema and therefore count as 'additionalProperties'
@@ -402,7 +406,7 @@ def _set_default_object_properties(properties, instance, yaml_indent):
     for property_name, subschema in properties.items():
         if instance == "{{NO_DEFAULT}}":
             continue
-        
+
         # In tricky cases such as {oneOf: [{type: object, type: str}]},
         # then the 'instance' may not be valid for the particular 'oneOf' schema we're looking at.
         if not isinstance(instance, (list, dict)):
